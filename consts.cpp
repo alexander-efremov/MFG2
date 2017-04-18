@@ -1,4 +1,4 @@
-#include "consts.h"
+#include "inc/consts.h"
 
 double SIGMA = 0.;
 double SIGMA_SQ = 0.;

@@ -1,5 +1,5 @@
-#include <malgo.h>
-#include <utils.h>
+#include "inc/malgo.h"
+#include "inc/utils.h"
 #include "catch.hpp"
 
 

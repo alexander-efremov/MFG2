@@ -1,16 +1,13 @@
-cmake_minimum_required(VERSION 3.6)
-project(MFG)
+cmake_minimum_required(VERSION 2.8)
+
+project(mfg)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(SOURCE_FILES main.cpp)
-add_executable(MFG ${SOURCE_FILES})
+set(HEADER_FILES ${CMAKE_CURRENT_SOURCE_DIR})
 
-include_directories(mfg)
-include_directories(malgo)
+set(SOURCE_FILES consts.cpp solver1.cpp common.cpp malgo_tests.cpp mfg_tests.cpp catch.hpp inc/consts.h inc/common.h inc/utils.h inc/malgo.h)
 
-add_subdirectory(mfg)
-add_subdirectory(malgo)
-add_subdirectory(tests)
+include_directories(inc)
 
-target_link_libraries(MFG mfg)
+add_executable(mfg ${SOURCE_FILES} ${HEADER_FILES})

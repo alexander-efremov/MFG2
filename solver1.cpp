@@ -1,9 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
-#include "common.h"
+#include "inc/common.h"
 #include <string.h>
-#include <malgo.h>
-#include <utils.h>
+#include "inc/malgo.h"
+#include "inc/utils.h"
 
 /**
 	 * n - число уравнений (строк матрицы)

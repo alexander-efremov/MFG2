@@ -1,10 +1,10 @@
 
 #define CATCH_CONFIG_MAIN
-
 #include "catch.hpp"
-#include <consts.h>
-#include <common.h>
-#include <utils.h>
+
+#include "inc/consts.h"
+#include "inc/common.h"
+#include "inc/utils.h"
 
 
 void print_params() {
