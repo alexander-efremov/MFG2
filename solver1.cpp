@@ -15,7 +15,7 @@
 inline void fill_b(double *b, int n, double tau, double sigma_sq) {
     b[0] = 0.;
     for (int i = 1; i < n; ++i)
-        b[i] = -tau / sigma_sq;
+        b[i] = -tau * sigma_sq;
 }
 
 inline void fill_c(double *c, int n, double tau, double sigma_sq, double h_sq) {
@@ -25,24 +25,25 @@ inline void fill_c(double *c, int n, double tau, double sigma_sq, double h_sq) {
 
 inline void fill_d(double *d, int n, double tau, double sigma_sq) {
     for (int i = 0; i < n - 1; ++i)
-        d[i] = -tau / sigma_sq;
+        d[i] = -tau * sigma_sq;
+    d[n - 1] = 0.;
 }
 
 inline double func_alpha(double a_coef, double t, double x) {
     return a_coef * t * x * (1. - x);
 }
 
-inline double get_f(double sigma_sq, double a_coef, double x, double t) {
-    return 0.;
+inline double get_f(double sigma_sq, double a_coef, double x, double t, double u) {
+    return a_coef * ( x * (1. - x) + u * t * (1. - 2. * x) + 2. * sigma_sq * t );
 }
 
-double analytical_solution_1(double a, double t, double x) {
-    return (a * t * x * x * (3. - 2. * x)) / 6.;
+double analytical_solution_1(double a_coef, double t, double x) {
+    return a_coef * t * x * (1. - x);
 }
 
 double
-get_right_part_inner_points(int ii, double *m_pr, double time, double a, double b, double h, double a_coef,
-                            double tau) {
+get_rp_value(int ii, double *m_pr, double time, double a, double b, double h, double a_coef,
+             double tau) {
 
     // определяем точку из которой будем опускать траекторию
     double x = a + ii * h;
@@ -51,7 +52,7 @@ get_right_part_inner_points(int ii, double *m_pr, double time, double a, double 
     double alpha = func_alpha(a_coef, time, x);
     x -= tau * alpha;
 
-    if (x <= a || x >= b)
+    if (x < a || x > b)
         printf("Time value %.8le! ERROR INDEX i=%d : x=%.8le\n ", time, ii, x);
 
     int i = (int) ((x - a) / h);
@@ -67,10 +68,13 @@ get_right_part_inner_points(int ii, double *m_pr, double time, double a, double 
 }
 
 void fill_rp(double *rp, double *m_pr, double time, int n, double tau, double h, double h_sq, double sigma_sq,
-             double a_coef, double a, double b) {
-    for (int i = 1; i < n - 1; ++i) {
-        double val = tau * h_sq * get_f(sigma_sq, a_coef, i * h, time) +
-                     get_right_part_inner_points(i, m_pr, time, a, b, h, a_coef, tau) * h_sq;
+             double a_coef, double a, double b, double u) {
+    for (int i = 0; i < n; ++i) {
+        double f = get_f(sigma_sq, a_coef, i * h, time, u);
+        double d1 = tau * h_sq * f;
+        double d2 = get_rp_value(i, m_pr, time, a, b, h, a_coef, tau);
+        d2 = d2 * h_sq;
+        double val = d1 + d2;
         rp[i] = val;
     }
 }
@@ -119,20 +123,17 @@ void print_thomas_arrays(double *b, double *c, double *d, int n) {
 }
 
 void fill_arr_by_ex_sol(double *arr, int n, double time, double a_coef, double h, double a) {
-    for (int i = 1; i < n - 1; ++i)
+    for (int i = 0; i < n; ++i)
         arr[i] = analytical_solution_1(a_coef, time, a + i * h);
-    arr[0] = 0.;
-    arr[n - 1] = 0.;
 }
 
 double *solve_1(int n, int n_1, double h, double h_sq, double h_2, double sigma_sq, double sigma, double a, double b,
-                double a_coef, double tau, int time_step_cnt, double *exact_sol_to_fill) {
+                double a_coef, double tau, int time_step_cnt, double u, double *exact_sol_to_fill) {
     assert_params(h, h_sq, h_2, sigma_sq, n, n_1, sigma, a, tau, a_coef, time_step_cnt);
 
     double *m = (double *) malloc(n_1 * sizeof(double));
     double *m_pr = (double *) malloc(n_1 * sizeof(double));
     double *rp = (double *) malloc(n_1 * sizeof(double));
-    double *ex_m = (double *) malloc(n_1 * sizeof(double));
     double *err = (double *) malloc(n_1 * sizeof(double));
     double *b_t = (double *) malloc(n_1 * sizeof(double));
     double *c_t = (double *) malloc(n_1 * sizeof(double));
@@ -141,28 +142,28 @@ double *solve_1(int n, int n_1, double h, double h_sq, double h_2, double sigma_
     fill_b(b_t, n_1, tau, sigma_sq);
     fill_c(c_t, n_1, tau, sigma_sq, h_sq);
     fill_d(d_t, n_1, tau, sigma_sq);
-    //print_thomas_arrays(b, c, d, n);
+    print_thomas_arrays(b_t, c_t, d_t, n_1);
 
-    for (int i = 0; i < n; ++i) m[i] = rp[i] = m_pr[i] = 0.;
+    for (int i = 0; i < n_1; ++i) m[i] = rp[i] = m_pr[i] = 0.;
 
-    fill_arr_by_ex_sol(m_pr, n, 0., a_coef, h, a);
+    fill_arr_by_ex_sol(m_pr, n_1, 0., a_coef, h, a);
 
-//    printf("M_PR\n");
-//    print_matrix1(m_pr, 1, n);
+    print_vector("M_PR", m_pr, n_1);
 
     for (int tl = 1; tl <= time_step_cnt; ++tl) {
-        fill_rp(rp, m_pr, tau * tl, n, tau, h, h_sq, sigma_sq, a_coef, a, b);
-        thomas_algo_verzh(n, b_t, c_t, d_t, rp, m);
-        memcpy(m_pr, m, n * sizeof(double));
+        fill_rp(rp, m_pr, tau * tl, n_1, tau, h, h_sq, sigma_sq, a_coef, a, b, u);
+        thomas_algo_verzh(n_1, b_t, c_t, d_t, rp, m);
+        memcpy(m_pr, m, n_1 * sizeof(double));
     }
 
-    fill_arr_diff(err, ex_m, m, n);
-//    printf("ERR \n");
-//    print_matrix1(err, 1, n);
+    fill_arr_by_ex_sol(exact_sol_to_fill, n_1, tau * time_step_cnt, a_coef, h, a);
+    print_vector("EXACT", exact_sol_to_fill, n_1);
 
-    fill_arr_by_ex_sol(exact_sol_to_fill, n, tau * time_step_cnt, a_coef, h, a);
+    print_vector("APPROX", m, n_1);
 
-    free(ex_m);
+    fill_arr_diff(err, exact_sol_to_fill, m, n_1);
+    print_vector("ERR", err, n_1);
+
     free(m_pr);
     free(rp);
     free(err);

@@ -200,7 +200,7 @@ TEST_CASE("thomas_algo_test6") {
     free(c);
 }
 
-TEST_CASE("thomas_algo1_test1") {
+TEST_CASE("thomas_algo1_test1", "[verzh]") {
     const int n = 5;
 
     double *b = (double *) malloc(n * sizeof(double));
@@ -264,7 +264,7 @@ TEST_CASE("thomas_algo1_test1") {
     free(x);
 }
 
-TEST_CASE("thomas_algo1_test2") {
+TEST_CASE("thomas_algo1_test2", "[verzh]") {
     const int n = 3;
 
     double *b = (double *) malloc(n * sizeof(double));

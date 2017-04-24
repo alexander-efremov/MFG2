@@ -6,9 +6,10 @@
 #include "solver1.h"
 
 
-void print_params(int nx, double a_coef, double sigma, double sigma_sq, double h, double h_sq, double tau,
+void print_params(int n, int n_1, double a_coef, double sigma, double sigma_sq, double h, double h_sq, double tau,
                   int time_step_cnt) {
-    printf("\nNX = %d\n", nx);
+    printf("\nN = %d\n", n);
+    printf("N_1 = %d\n", n_1);
     printf("A_COEF = %le\n", a_coef);
     printf("SIGMA = %le\n", sigma);
     printf("SIGMA_SQ = %le\n", sigma_sq);
@@ -32,6 +33,7 @@ void run_solver_1() {
     double tau = 1e-3;
     double sigma = 1.;
     double sigma_sq = sigma * sigma;
+    double u = 2.;
 
     int n = 20;
     int n_1 = n + 1;
@@ -39,13 +41,13 @@ void run_solver_1() {
     double h_2 = 0.5 * h;
     double h_sq = h * h;
 
-    print_params(n, a_coef, sigma, sigma_sq, h, h_sq, tau, time_step_cnt);
+    print_params(n, n_1, a_coef, sigma, sigma_sq, h, h_sq, tau, time_step_cnt);
 
     if (sigma == 1.) assert(tau >= h_sq / 8.);
 
     double *exact_m = (double *) malloc(n_1 * sizeof(double));
 
-    double *m = solve_1(n, n_1, h, h_sq, h_2, sigma_sq, sigma, a, b, a_coef, tau, time_step_cnt, exact_m);
+    double *m = solve_1(n, n_1, h, h_sq, h_2, sigma_sq, sigma, a, b, a_coef, tau, time_step_cnt, u, exact_m);
 
     free(m);
     free(exact_m);
