@@ -95,7 +95,9 @@ void assert_params(double h, double h_sq, double h_2, double sigma_sq, int n, in
 //    printf("h * h = %e\n", h * h);
 //    printf("8 * tau * sigma_sq = %e\n", 8. * tau * sigma_sq);
 //    fflush(stdout);
-    assert(h * h <= 8 * tau * sigma_sq);
+    //assert(h * h <= 8 * tau * sigma_sq);
+    if (h * h <= 8 * tau * sigma_sq)
+        printf("\n!!!!!!!!!!!!!!!!!! H*H<=8*tau*sigma_sq FAILED\n");
 }
 
 /**
@@ -149,13 +151,13 @@ double *solve_1(int n, int n_1, double h, double h_sq, double h_2, double sigma_
     fill_b(b_t, n_1, tau, sigma_sq);
     fill_c(c_t, n_1, tau, sigma_sq, h_sq);
     fill_d(d_t, n_1, tau, sigma_sq);
-    print_thomas_arrays(b_t, c_t, d_t, n_1);
+    //print_thomas_arrays(b_t, c_t, d_t, n_1);
 
     for (int i = 0; i < n_1; ++i) m[i] = m_pr[i] = rp[i] = 0.;
 
     fill_arr_by_ex_sol(m_pr, n_1, 0., a_coef, h, a);
 
-    print_vector("M_PR", m_pr, n_1);
+    //print_vector("M_PR", m_pr, n_1);
 
     for (int tl = 1; tl <= time_step_cnt; ++tl) {
         fill_rp(rp, m_pr, tau * tl, n_1, tau, h, h_sq, sigma_sq, a_coef, a, b, u);
@@ -171,38 +173,35 @@ double *solve_1(int n, int n_1, double h, double h_sq, double h_2, double sigma_
         l1_norm_err[tl] = get_l1_norm(h, n_1, err);
         l1_norm_sol[tl] = get_l1_norm(h, n_1, m);
 
-        printf("TIME LEVEL %d \n", tl);
-        printf("uniform norm %22.14le\n", max[tl]);
-        printf("l1 norm of error %22.14le\n", l1_norm_err[tl]);
-        printf("l1 norm of num solution%22.14le\n", l1_norm_sol[tl]);
+//        printf("TIME LEVEL %d \n", tl);
+//        printf("uniform norm %22.14le\n", max[tl]);
+//        printf("l1 norm of error %22.14le\n", l1_norm_err[tl]);
+//        printf("l1 norm of num solution%22.14le\n", l1_norm_sol[tl]);
     }
 
-    fill_arr_by_ex_sol(exact_sol_to_fill, n_1, tau * time_step_cnt, a_coef, h, a);
-    print_vector("EXACT", exact_sol_to_fill, n_1);
+//    fill_arr_by_ex_sol(exact_sol_to_fill, n_1, tau * time_step_cnt, a_coef, h, a);
+//    print_vector("EXACT", exact_sol_to_fill, n_1);
+//
+//    sprintf(m_fout, "%f_%f_%s.out", tau * time_step_cnt, h, "err");
+//    print_vector2D_to_file(n, a, h, err, m_fout);
+//
+//    sprintf(m_fout, "%f_%f_%s.out", tau * time_step_cnt, h, "m");
+//    print_vector2D_to_file(n, a, h, m, m_fout);
+
+//    fill_arr_by_ex_sol(ex_m, n, tau * time_step_cnt, a_coef, h, a);
+//    print_matrix1("EXACT SOL", ex_m, n_1);
+
+//    fill_arr_diff(err, ex_m, m, n);
+//    print_matrix1("ERR \n", err, n_1);
+
+//    fill_arr_by_ex_sol(exact_sol_to_fill, n, tau * time_step_cnt, a_coef, h, a);
+//    print_vector("APPROX", m, n_1);
+
+//    fill_arr_diff(err, exact_sol_to_fill, m, n_1);
+//    print_vector("ERR", err, n_1);
 
     max[0] = get_max_fabs_array(l1_norm_err, time_step_cnt + 1);
     printf("uniform norm of l1 norm of error %22.14le\n", max[0]);
-
-    sprintf(m_fout, "%f_%f_%s.out", tau * time_step_cnt, h, "err");
-    print_vector2D_to_file(n, a, h, err, m_fout);
-
-    sprintf(m_fout, "%f_%f_%s.out", tau * time_step_cnt, h, "m");
-    print_vector2D_to_file(n, a, h, m, m_fout);
-
-    fill_arr_by_ex_sol(ex_m, n, tau * time_step_cnt, a_coef, h, a);
-//    printf("EXACT SOL \n");
-//    print_matrix1(ex_m, 1, n);
-
-    fill_arr_diff(err, ex_m, m, n);
-//    printf("ERR \n");
-//    print_matrix1(err, 1, n);
-
-    fill_arr_by_ex_sol(exact_sol_to_fill, n, tau * time_step_cnt, a_coef, h, a);
-
-    print_vector("APPROX", m, n_1);
-
-    fill_arr_diff(err, exact_sol_to_fill, m, n_1);
-    print_vector("ERR", err, n_1);
 
     free(ex_m);
     free(max);
