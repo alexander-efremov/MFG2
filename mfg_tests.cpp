@@ -1,8 +1,6 @@
-
 #define CATCH_CONFIG_MAIN
 
 #include "catch.hpp"
-
 #include "solver1.h"
 
 
@@ -34,13 +32,12 @@ void run_solver_1(int _n, double _tau, int _time_step_cnt, double _sigma) {
     double tau = _tau;
     double sigma = _sigma;
     double sigma_sq = sigma * sigma;
-    int n = _n;
     int n_1 = _n + 1;
-    double h = (b - a) / n;
+    double h = (b - a) / _n;
     double h_2 = 0.5 * h;
     double h_sq = h * h;
-    print_params(n, n_1, a_coef, sigma, sigma_sq, h, h_sq, tau, time_step_cnt);
-    solve_1(n, n_1, h, h_sq, h_2, sigma_sq, sigma, a, b, a_coef, tau, time_step_cnt);
+    print_params(n_1 - 1, n_1, a_coef, sigma, sigma_sq, h, h_sq, tau, time_step_cnt);
+    solve_1(n_1, h, h_sq, h_2, sigma_sq, sigma, a, b, a_coef, tau, time_step_cnt);
 }
 
 void run_solver_1() {
@@ -56,7 +53,7 @@ TEST_CASE("mfg2_solver_1", "[run_solver_1]") {
 }
 
 TEST_CASE("mfg2_solver_1_many", "[run_solver_1_l1_diag]") {
-    int exp_cnt = 2;
+    int exp_cnt = 5;
     for (int i = 0; i < exp_cnt; ++i) {
         printf("\n\n=============== EXPERIMENT %d ================ \n\n", i + 1);
         int nx = 0;

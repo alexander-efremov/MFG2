@@ -1,6 +1,6 @@
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
+#include <cassert>
+#include <cstdio>
+#include <cstring>
 #include "inc/malgo.h"
 #include "inc/utils.h"
 
@@ -42,9 +42,8 @@ double analytical_solution_1(double a_coef, double t, double x) {
 }
 
 double
-get_rp_value(int ii, double *m_pr, double time, double a, double b, double h, double a_coef,
+get_rp_value(int ii, const double *m_pr, double time, double a, double b, double h, double a_coef,
              double tau) {
-
     // определяем точку из которой будем опускать траекторию
     double x = a + ii * h;
 
@@ -55,7 +54,7 @@ get_rp_value(int ii, double *m_pr, double time, double a, double b, double h, do
     if (x < a || x > b)
         printf("Time value %.8le! ERROR INDEX i=%d : x=%.8le\n ", time, ii, x);
 
-    int i = (int) ((x - a) / h);
+    auto i = (int) ((x - a) / h);
     double xi_l = a + i * h; // левая граница интервала
     double xi_r = a + (i + 1) * h; // правая граница интервала
     assert(xi_l <= x && x <= xi_r);
@@ -67,23 +66,24 @@ get_rp_value(int ii, double *m_pr, double time, double a, double b, double h, do
     return m;
 }
 
-void fill_rp(double *rp, double *m_pr, double time, int n, double tau, double h, double h_sq, double sigma_sq,
+void fill_rp(double *rp, double *m_pr, double time, int n_1, double tau, double h, double h_sq, double sigma_sq,
              double a_coef, double a, double b) {
-    for (int i = 0; i < n; ++i) {
+    for (int i = 1; i < n_1 - 1; ++i) {
         double f = get_f(sigma_sq, a_coef, i * h, time);
         double d = get_rp_value(i, m_pr, time, a, b, h, a_coef, tau);
         rp[i] = (tau * f + d) * h_sq;
     }
+    rp[0] = 0.;
+    rp[n_1 - 1] = 0.;
 }
 
-void assert_params(double h, double h_sq, double h_2, double sigma_sq, int n, int n_1, double sigma,
+void assert_params(double h, double h_sq, double h_2, double sigma_sq, int n_1, double sigma,
                    double a, double tau, double a_coef, double time_step_cnt) {
     assert(h > 0.);
     assert(h_sq == h * h);
     assert(h_2 == h / 2.);
     assert(sigma_sq == sigma * sigma);
-    assert(n > 0);
-    assert(n_1 == n + 1);
+    assert(n_1 > 0);
     assert(a == 0.);
     assert(tau > 0.);
     assert(a_coef > 0.);
@@ -121,18 +121,18 @@ void print_thomas_arrays(double *b, double *c, double *d, int n) {
     printf("\n");
 }
 
-void fill_arr_by_ex_sol(double *arr, int n, double time, double a_coef, double h, double a) {
-    for (int i = 0; i < n; ++i)
+void fill_arr_by_ex_sol(double *arr, int n_1, double time, double a_coef, double h, double a) {
+    for (int i = 0; i < n_1; ++i)
         arr[i] = analytical_solution_1(a_coef, time, a + i * h);
 }
 
-void solve_1(int n, int n_1, double h, double h_sq, double h_2, double sigma_sq, double sigma, double a, double b,
+void solve_1(int n_1, double h, double h_sq, double h_2, double sigma_sq, double sigma, double a, double b,
              double a_coef, double tau, int time_step_cnt) {
-    assert_params(h, h_sq, h_2, sigma_sq, n, n_1, sigma, a, tau, a_coef, time_step_cnt);
+    assert_params(h, h_sq, h_2, sigma_sq, n_1, sigma, a, tau, a_coef, time_step_cnt);
 
     double *m = (double *) malloc(n_1 * sizeof(double));
     double *m_pr = (double *) malloc(n_1 * sizeof(double));
-    double *ex_m = (double *) malloc(n * sizeof(double));
+    double *ex_m = (double *) malloc(n_1 * sizeof(double));
     double *rp = (double *) malloc(n_1 * sizeof(double));
     double *err = (double *) malloc(n_1 * sizeof(double));
     double *b_t = (double *) malloc(n_1 * sizeof(double));
@@ -152,18 +152,14 @@ void solve_1(int n, int n_1, double h, double h_sq, double h_2, double sigma_sq,
 
     for (int tl = 1; tl <= time_step_cnt; ++tl) {
         fill_rp(rp, m_pr, tau * tl, n_1, tau, h, h_sq, sigma_sq, a_coef, a, b);
-        thomas_algo_verzh(n_1, b_t, c_t, d_t, rp, m);
+        thomas_algo_verzh_modified(n_1, b_t, c_t, d_t, rp, m);
         memcpy(m_pr, m, n_1 * sizeof(double));
     }
 
     fill_arr_by_ex_sol(ex_m, n_1, tau * time_step_cnt, a_coef, h, a);
     fill_arr_diff(err, ex_m, m, n_1);
-    print_XY("exact", n_1, h, time_step_cnt, a, b, tau, ex_m);
-    print_XY("numer", n_1, h, time_step_cnt, a, b, tau, m);
     print_XY("exact_numer", n_1, h, time_step_cnt, a, b, tau, ex_m, m);
-
-    double l1_norm_err = get_l1_norm(n_1, err);
-    printf("uniform norm of l1 norm of error %22.14le\n", l1_norm_err);
+    printf("uniform norm of l1 norm of error %22.14le\n", get_l1_norm(n_1, err));
 
     free(ex_m);
     free(m_pr);
