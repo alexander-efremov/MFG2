@@ -34,24 +34,13 @@ void run_solver_1(int _n, double _tau, int _time_step_cnt, double _sigma) {
     double tau = _tau;
     double sigma = _sigma;
     double sigma_sq = sigma * sigma;
-    double u = 2.;
-
     int n = _n;
-    int n_1 = n + 1;
+    int n_1 = _n + 1;
     double h = (b - a) / n;
     double h_2 = 0.5 * h;
     double h_sq = h * h;
-
     print_params(n, n_1, a_coef, sigma, sigma_sq, h, h_sq, tau, time_step_cnt);
-
-    //if (sigma == 1.) assert(tau >= h_sq / 8.);
-
-    double *exact_m = (double *) malloc(n_1 * sizeof(double));
-
-    double *m = solve_1(n, n_1, h, h_sq, h_2, sigma_sq, sigma, a, b, a_coef, tau, time_step_cnt, u, exact_m);
-
-    free(m);
-    free(exact_m);
+    solve_1(n, n_1, h, h_sq, h_2, sigma_sq, sigma, a, b, a_coef, tau, time_step_cnt);
 }
 
 void run_solver_1() {
@@ -67,14 +56,13 @@ TEST_CASE("mfg2_solver_1", "[run_solver_1]") {
 }
 
 TEST_CASE("mfg2_solver_1_many", "[run_solver_1_l1_diag]") {
-    int exp_cnt = 5;
+    int exp_cnt = 2;
     for (int i = 0; i < exp_cnt; ++i) {
         printf("\n\n=============== EXPERIMENT %d ================ \n\n", i + 1);
         int nx = 0;
         double tau = 1e-3;
         double sigma = 1.;
         int tsc;
-        double mult = 1.;
         switch (i) {
             case 0:
                 nx = 50;
@@ -109,6 +97,7 @@ TEST_CASE("mfg2_solver_1_many", "[run_solver_1_l1_diag]") {
             default:
                 return;
         }
+
         assert(tau * tsc == 1e-2);
         //printf("TAU * TIME_STEP_COUNT = %e", tau * tsc);
         run_solver_1(nx, tau, tsc, sigma);
@@ -125,8 +114,8 @@ TEST_CASE("mfg2_solver_1_tsc_const", "[run_solver_1_many_tcs_const]") {
             double tau_d = pow(4., j);
             double tau = 1e-3 / tau_d;
             double sigma = 1.;
-            double tcs_m = pow(4., j);
-            int time_step_cnt = 10. * tcs_m;
+            int tcs_m = (int) pow(4., j);
+            int time_step_cnt = 10 * tcs_m;
             switch (i) {
                 case 0:
                     nx = 50;

@@ -29,12 +29,12 @@ inline void fill_d(double *d, int n, double tau, double sigma_sq) {
     d[n - 1] = 0.;
 }
 
-inline double func_alpha(double a_coef, double t, double x) {
+inline double func_u(double a_coef, double t, double x) {
     return a_coef * t * x * (1. - x);
 }
 
-inline double get_f(double sigma_sq, double a_coef, double x, double t, double u) {
-    return a_coef * (x * (1. - x) + u * t * (1. - 2. * x) + 2. * sigma_sq * t);
+inline double get_f(double sigma_sq, double a_coef, double x, double t) {
+    return a_coef * x * (1. - x) + func_u(a_coef, t, x) * a_coef * t * (1. - 2. * x) + 2. * sigma_sq * a_coef * t;
 }
 
 double analytical_solution_1(double a_coef, double t, double x) {
@@ -49,7 +49,7 @@ get_rp_value(int ii, double *m_pr, double time, double a, double b, double h, do
     double x = a + ii * h;
 
     // опускаем траекторию из этой точки
-    double alpha = func_alpha(a_coef, time, x);
+    double alpha = func_u(a_coef, time, x);
     x -= tau * alpha;
 
     if (x < a || x > b)
@@ -68,14 +68,11 @@ get_rp_value(int ii, double *m_pr, double time, double a, double b, double h, do
 }
 
 void fill_rp(double *rp, double *m_pr, double time, int n, double tau, double h, double h_sq, double sigma_sq,
-             double a_coef, double a, double b, double u) {
+             double a_coef, double a, double b) {
     for (int i = 0; i < n; ++i) {
-        double f = get_f(sigma_sq, a_coef, i * h, time, u);
-        double d1 = tau * h_sq * f;
-        double d2 = get_rp_value(i, m_pr, time, a, b, h, a_coef, tau);
-        d2 = d2 * h_sq;
-        double val = d1 + d2;
-        rp[i] = val;
+        double f = get_f(sigma_sq, a_coef, i * h, time);
+        double d = get_rp_value(i, m_pr, time, a, b, h, a_coef, tau);
+        rp[i] = (tau * f + d) * h_sq;
     }
 }
 
@@ -95,8 +92,8 @@ void assert_params(double h, double h_sq, double h_2, double sigma_sq, int n, in
 //    printf("h * h = %e\n", h * h);
 //    printf("8 * tau * sigma_sq = %e\n", 8. * tau * sigma_sq);
 //    fflush(stdout);
-    //assert(h * h <= 8 * tau * sigma_sq);
-    if (h * h <= 8 * tau * sigma_sq)
+    //assert(h_sq <= 8 * tau * sigma_sq);
+    if (h_sq > 8. * tau * sigma_sq)
         printf("\n!!!!!!!!!!!!!!!!!! H*H<=8*tau*sigma_sq FAILED\n");
 }
 
@@ -129,11 +126,9 @@ void fill_arr_by_ex_sol(double *arr, int n, double time, double a_coef, double h
         arr[i] = analytical_solution_1(a_coef, time, a + i * h);
 }
 
-double *solve_1(int n, int n_1, double h, double h_sq, double h_2, double sigma_sq, double sigma, double a, double b,
-                double a_coef, double tau, int time_step_cnt, double u, double *exact_sol_to_fill) {
+void solve_1(int n, int n_1, double h, double h_sq, double h_2, double sigma_sq, double sigma, double a, double b,
+             double a_coef, double tau, int time_step_cnt) {
     assert_params(h, h_sq, h_2, sigma_sq, n, n_1, sigma, a, tau, a_coef, time_step_cnt);
-
-    char m_fout[25];
 
     double *m = (double *) malloc(n_1 * sizeof(double));
     double *m_pr = (double *) malloc(n_1 * sizeof(double));
@@ -143,10 +138,6 @@ double *solve_1(int n, int n_1, double h, double h_sq, double h_2, double sigma_
     double *b_t = (double *) malloc(n_1 * sizeof(double));
     double *c_t = (double *) malloc(n_1 * sizeof(double));
     double *d_t = (double *) malloc(n_1 * sizeof(double));
-
-    double *max = (double *) malloc((time_step_cnt + 1) * sizeof(double));
-    double *l1_norm_err = (double *) malloc((time_step_cnt + 1) * sizeof(double));
-    double *l1_norm_sol = (double *) malloc((time_step_cnt + 1) * sizeof(double));
 
     fill_b(b_t, n_1, tau, sigma_sq);
     fill_c(c_t, n_1, tau, sigma_sq, h_sq);
@@ -160,59 +151,25 @@ double *solve_1(int n, int n_1, double h, double h_sq, double h_2, double sigma_
     //print_vector("M_PR", m_pr, n_1);
 
     for (int tl = 1; tl <= time_step_cnt; ++tl) {
-        fill_rp(rp, m_pr, tau * tl, n_1, tau, h, h_sq, sigma_sq, a_coef, a, b, u);
+        fill_rp(rp, m_pr, tau * tl, n_1, tau, h, h_sq, sigma_sq, a_coef, a, b);
         thomas_algo_verzh(n_1, b_t, c_t, d_t, rp, m);
         memcpy(m_pr, m, n_1 * sizeof(double));
-
-        fill_arr_by_ex_sol(ex_m, n_1, tau * tl, a_coef, h, a);
-        fill_arr_diff(err, ex_m, m, n_1);
-        //print_vector("EXACT SOL", ex_m, n_1);
-        //print_vector("ERR", err, n_1);
-
-        max[tl] = get_max_fabs_array(err, n_1);
-        l1_norm_err[tl] = get_l1_norm(h, n_1, err);
-        l1_norm_sol[tl] = get_l1_norm(h, n_1, m);
-
-//        printf("TIME LEVEL %d \n", tl);
-//        printf("uniform norm %22.14le\n", max[tl]);
-//        printf("l1 norm of error %22.14le\n", l1_norm_err[tl]);
-//        printf("l1 norm of num solution%22.14le\n", l1_norm_sol[tl]);
     }
 
-//    fill_arr_by_ex_sol(exact_sol_to_fill, n_1, tau * time_step_cnt, a_coef, h, a);
-//    print_vector("EXACT", exact_sol_to_fill, n_1);
-//
-//    sprintf(m_fout, "%f_%f_%s.out", tau * time_step_cnt, h, "err");
-//    print_vector2D_to_file(n, a, h, err, m_fout);
-//
-//    sprintf(m_fout, "%f_%f_%s.out", tau * time_step_cnt, h, "m");
-//    print_vector2D_to_file(n, a, h, m, m_fout);
+    fill_arr_by_ex_sol(ex_m, n_1, tau * time_step_cnt, a_coef, h, a);
+    fill_arr_diff(err, ex_m, m, n_1);
+    print_XY("exact", n_1, h, time_step_cnt, a, b, tau, ex_m);
+    print_XY("numer", n_1, h, time_step_cnt, a, b, tau, m);
+    print_XY("exact_numer", n_1, h, time_step_cnt, a, b, tau, ex_m, m);
 
-//    fill_arr_by_ex_sol(ex_m, n, tau * time_step_cnt, a_coef, h, a);
-//    print_matrix1("EXACT SOL", ex_m, n_1);
-
-//    fill_arr_diff(err, ex_m, m, n);
-//    print_matrix1("ERR \n", err, n_1);
-
-//    fill_arr_by_ex_sol(exact_sol_to_fill, n, tau * time_step_cnt, a_coef, h, a);
-//    print_vector("APPROX", m, n_1);
-
-//    fill_arr_diff(err, exact_sol_to_fill, m, n_1);
-//    print_vector("ERR", err, n_1);
-
-    max[0] = get_max_fabs_array(l1_norm_err, time_step_cnt + 1);
-    printf("uniform norm of l1 norm of error %22.14le\n", max[0]);
+    double l1_norm_err = get_l1_norm(n_1, err);
+    printf("uniform norm of l1 norm of error %22.14le\n", l1_norm_err);
 
     free(ex_m);
-    free(max);
-    free(l1_norm_err);
-    free(l1_norm_sol);
     free(m_pr);
     free(rp);
     free(err);
     free(b_t);
     free(c_t);
     free(d_t);
-
-    return m;
 }

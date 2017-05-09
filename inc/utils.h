@@ -82,7 +82,6 @@ inline void print_matrix(double *a, int n, int m, int precision = 8) {
     }
 }
 
-
 inline void print_matrix1(double *a, int n, int m, int precision = 8) {
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < m; ++j) {
@@ -120,7 +119,7 @@ inline void print_matrix1(double *a, int n, int m, int precision = 8) {
     }
 }
 
-inline void print_vector(const char* text, double *a, int m) {
+inline void print_vector(const char *text, double *a, int m) {
     printf(text);
     printf("\n");
     print_matrix1(a, 1, m, 8);
@@ -176,10 +175,10 @@ inline void print_vector2D_to_file(int n, double first, double h, double *data, 
     FILE *f = fopen(filename, "w");
 
     fprintf(f, "%20.14le\t%20.14le\n", first, data[0]);
-    for (int i = 1; i < n-1; ++i) {
+    for (int i = 1; i < n - 1; ++i) {
         fprintf(f, "%20.14le\t%20.14le\n", first + (i - 0.5) * h, data[i]);
     }
-    fprintf(f, "%20.14le\t%20.14le\n", first + (n - 1) * h, data[n-1]);
+    fprintf(f, "%20.14le\t%20.14le\n", first + (n - 1) * h, data[n - 1]);
     fclose(f);
 }
 
@@ -188,23 +187,14 @@ inline void fill_arr_diff(double *err, double *arr1, double *arr2, int n) {
         err[i] = arr1[i] - arr2[i];
 }
 
-inline double get_max_fabs_array(double *arr, int n) {
-    double max = fabs(arr[0]);
-    for (int i = 1; i < n; ++i){
-        if (max <= fabs(arr[i])) max = fabs(arr[i]);
-    }
-    return max;
-}
-
-inline double get_l1_norm_vec(int x_len, int y_len, double *data) { // new
+inline double get_l1_norm(int n, double *data) {
     double r = 0.;
-    for (int i = 0; i < x_len; ++i)
-        for (int j = 0; j < y_len; ++j)
-            r += fabs(data[y_len * i + j]);
-    return r / (x_len * y_len);
+    for (int i = 0; i < n; ++i)
+        r += fabs(data[i]);
+    return r / n;
 }
 
-inline double get_l1_norm(double hx, double hy, int x_len, int y_len, double *data) { // old
+inline double get_l1_norm(double hx, double hy, int x_len, int y_len, double *data) {
     double r = 0.;
     for (int i = 0; i < x_len; ++i)
         for (int j = 0; j < y_len; ++j)
@@ -212,33 +202,15 @@ inline double get_l1_norm(double hx, double hy, int x_len, int y_len, double *da
     return r * hx * hy;
 }
 
-inline double get_l1_norm(double h, int x_len, double *data) {
-    double r = 0.;
-    r += data[0] * h / 2.;
-    for (int i = 1; i < x_len - 2; ++i)
-        r += fabs(data[i] + data[i+1]) * h / 2.;
-    r += data[x_len - 1] * h / 2.;
-    return r;
-}
-
-inline double get_l1_norm_int_trapezoidal(double hx, double hy, int x_len, int y_len, double *data) {
-    double r = 0.;
-    for (int i = 0; i < x_len; ++i)
-        for (int j = 0; j < y_len; ++j)
-            r += 0.25 * (fabs(data[y_len * i + j]) +
-                         fabs(data[y_len * (i + 1) + j]) +
-                         fabs(data[y_len * i + j + 1]) +
-                         fabs(data[y_len * (i + 1) + j + 1])) * hx * hy;
-    return r;
-}
-
-
-inline double get_l_inf_norm(int x_len, int y_len, double *data) {
-    double max = FLT_MIN;
-    for (int i = 0; i < x_len; ++i)
-        for (int j = 0; j < y_len; ++j)
-            if (fabs(data[y_len * i + j]) > max)
-                max = fabs(data[y_len * i + j]);
+inline double get_linf_norm(int n, double *data) {
+    if (data == nullptr)
+        return 0.;
+    if (n < 1)
+        return 0.;
+    double max = data[0];
+    for (int i = 1; i < n; ++i)
+        if (fabs(data[i]) > max)
+            max = fabs(data[i]);
     return max;
 }
 
@@ -355,6 +327,46 @@ inline void print_surface(const char *filename, int ox_len, int oy_len,
         for (int j = 0; j < oy_len + 1; j++)
             fprintf(file, "\n%-30.20g  %-30.20g %-30.20g", i * hx, j * hy,
                     data[(oy_len + 1) * i + j]);
+
+    fclose(file);
+}
+
+inline void print_XY(const char *filename, int n,
+                     double hx, int t, double a, double b,
+                     double tau, double *data) {
+    char name[650];
+    sprintf(name, "%s_nx=%d_hx=%f_t=%d_tau=%f_a=%f_c=%f.dat",
+            filename, n, hx, t, tau, a, b);
+    FILE *file = fopen(name, "w");
+    fprintf(file, "TITLE = 'DEM DATA | DEM DATA | DEM DATA | DEM DATA'\nVARIABLES = 'x' %s\nZONE T='SubZone'",
+            filename);
+    fprintf(file, "\nI=%d K=%d ZONETYPE=Ordered", n, 1);
+    fprintf(file, "\nDATAPACKING=POINT\nDT=(SINGLE SINGLE)");
+    for (int i = 0; i < n; i++)
+        fprintf(file, "\n%-30.20g  %-30.20g", i * hx, data[i]);
+
+    fclose(file);
+}
+
+inline void print_XY(const char *filename, int n,
+                     double hx, int t, double a, double b,
+                     double tau, double *exact, double *numer) {
+    char name[650];
+    sprintf(name, "%s_nx=%d_hx=%f_t=%d_tau=%f_a=%f_c=%f.dat",
+            filename, n, hx, t, tau, a, b);
+    FILE *file = fopen(name, "w");
+    fprintf(file, "TITLE = 'DEM DATA'\nVARIABLES = 'x' %s", filename);
+    fprintf(file, "\nZONE T='EXACT'");
+    fprintf(file, "\nI=%d K=%d ZONETYPE=Ordered", n, 1);
+    fprintf(file, "\nDATAPACKING=POINT\nDT=(SINGLE SINGLE)");
+    for (int i = 0; i < n; i++)
+        fprintf(file, "\n%-30.20g  %-30.20g", i * hx, exact[i]);
+
+    fprintf(file, "\n\nZONE T='NUMER'");
+    fprintf(file, "\nI=%d K=%d ZONETYPE=Ordered", n, 1);
+    fprintf(file, "\nDATAPACKING=POINT\nDT=(SINGLE SINGLE)");
+    for (int i = 0; i < n; i++)
+        fprintf(file, "\n%-30.20g  %-30.20g", i * hx, numer[i]);
 
     fclose(file);
 }
