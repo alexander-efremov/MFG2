@@ -88,12 +88,12 @@ TEST_CASE("mfg2_solver_1_many", "[run_solver_1_l1_diag]") {
             case 0:
                 nx = 50;
                 tau = tau / 1.;
-                tsc = 10 * (int) 1.;
+                tsc = 10 * 1;
                 break;
             case 1:
                 nx = 100;
                 tau = tau / 4.;
-                tsc = 10 * (int) 4;
+                tsc = 10 * 4;
                 break;
             case 2:
                 nx = 200;
